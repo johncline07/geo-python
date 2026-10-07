@@ -1,3 +1,5 @@
+from xml.sax.handler import all_features
+
 import requests, csv
 
 URL = "https://services7.arcgis.com/xuAg12SDp2ow0Fb8/arcgis/rest/services/UpdatedPub150/FeatureServer/0/query"
@@ -57,19 +59,30 @@ def write_csv(rows, path):
         dict_writer.writeheader()
         dict_writer.writerows(rows)
 
+def get_all_features(url, page_size=1000):
+    offset = 0
+    all_features = []
+    while True:
+        features = get_page(url, offset, page_size)
+        if not features:
+            break
+        all_features.extend(features)
+        offset += len(features)
+    return all_features
+
+
 def main():
     total = get_count(URL)
     print(f"Total Features: {total}")
 
-    features = get_page(URL, 0, 5)
+    features = get_all_features(URL)
     print(f"Fetched {len(features)} features")
 
-    if features:
-        first = features[0]["properties"].keys()
-        print(f"Feature keys: {list(first)}")
+    if len(features) != total:
+        print(f"Warning: expected {total}, got {len(features)}")
 
     rows = [flatten(feature) for feature in features]
-    write_csv(rows, "ports_sample.csv")
+    write_csv(rows, "ports_all.csv")
 
 
 if __name__ == "__main__":
